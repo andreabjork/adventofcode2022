@@ -12,3 +12,4 @@ func Day19(inputFile string, part int) {
 	}
 }
 
+

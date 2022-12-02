@@ -59,21 +59,21 @@ var dayfuncs = map[int]interface{}{
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Printf("Run as:\n\tgo run main.go all\nor as:\n\tgo run main.go [day] [0|1] [0-9]")
+	if len(os.Args) < 3 {
+		fmt.Printf("Run as:\n\tgo run main.go [day] [0|1] [0-9:optional,picks 0.txt by default]")
 		return
 	}
 
-	var (
-		day        int
-		part       int
-		input			 int
-	)
+	day := util.ToInt(os.Args[1])
+	part := util.ToInt(os.Args[2])
 
-	day = util.ToInt(os.Args[1])
-	part = util.ToInt(os.Args[2])
-	input = util.ToInt(os.Args[3])
-	inputFile = fmt.Sprintf("days/day%d/input/%d.txt", day, input)
+	var input int
+	if len(os.Args) > 3 {
+		input = util.ToInt(os.Args[3])
+	} else {
+		input = 0
+	}
+	inputFile := fmt.Sprintf("days/day%d/input/%d.txt", day, input)
 
 	runDay(day, part, inputFile)
 }
