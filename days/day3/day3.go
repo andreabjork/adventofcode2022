@@ -61,7 +61,6 @@ func solveB(inputFile string) int {
         inRucksacks[item]++
         // Set priority for the group
         if inRucksacks[item] == 3 {
-          fmt.Println("Found common item!", string(item))
           prioritySum += items[item]
         }
         rucksack[item] = true
