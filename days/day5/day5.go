@@ -4,42 +4,39 @@ import (
 	"adventofcode/m/v2/util"
 	"fmt"
 	"regexp"
+	"strconv"
 )
 
 func Day5(inputFile string, part int) {
 	if part == 0 {
-		fmt.Printf("Top Crates: %s\n", solve(inputFile))
+		fmt.Printf("Top Crates: %s\n", solve(inputFile, false))
 	} else {
-		fmt.Printf("Not implmenented.")
+		fmt.Printf("Top Crates: %s\n", solve(inputFile, true))
 	}
 }
 
-func solve(inputFile string) string {
-
+func solve(inputFile string, canMoveMany bool) string {
 	ls := util.LineScanner(inputFile)
-	
-	stacks := []*Stack{}
-	var numCrate int
+	// Read 2 lines at a time
 	line, _ := util.Read(ls)
 	nextLine, ok := util.Read(ls)
 
-	firstLine := true
+	// Process initial stacks
+	stacks := []*Stack{}
+	numCrate := 0
 	for ok {
-		if firstLine {
-			stacks = append(stacks, &Stack{[]rune{}})
-		}
-
 		crateLabels := []rune(line)
-		// 4 runes per create [ d ] _, we process 1, 5, 9, ...
-		numCrate = 0
+		// 4 runes per crate: '[ d ] _', we process 1, 5, 9, ...
 		for i := 1; i < len(crateLabels); i += 4 {
+			if len(stacks) < numCrate+1  {
+				stacks = append(stacks, &Stack{[]rune{}})
+			}
 			if crateLabels[i] != ' ' {
-				stacks[numCrate].push(crateLabels[i])
+				stacks[numCrate].crates = append([]rune{crateLabels[i]}, stacks[numCrate].crates...)
 			}
 			numCrate++
 		}
-
-		firstLine = false
+		numCrate = 0
 		line = nextLine
 		nextLine, ok = util.Read(ls)
 		if nextLine == "" {
@@ -47,29 +44,74 @@ func solve(inputFile string) string {
 		}
 	}
 
+	PrintStacks(stacks)
+
+	line, ok = util.Read(ls)
+	// Process movements
 	re := regexp.MustCompile(`move (\d+) from (\d+) to (\d+)`)
 	for ok {
-		res := re1.FindStringSubmatch(line)
-		toMove := strconv
+		res := re.FindStringSubmatch(line)
+		toMove, _ := strconv.Atoi(res[1])
+		fromStack, _ := strconv.Atoi(res[2])
+		toStack, _ := strconv.Atoi(res[3])
 
+		if canMoveMany {
+			stacks[toStack-1].push(stacks[fromStack-1].pop(toMove))	
+		} else {
+			for i := 0;  i < toMove; i++ {
+				stacks[toStack-1].push(stacks[fromStack-1].pop(1))
+			}
+		}
+		
+
+		//PrintStacks(stacks)
 		line, ok = util.Read(ls)
 	}
+
+	tops := ""
+	for i := 0; i < len(stacks); i++ {
+		tops += string(stacks[i].peek())
+	}
+
+	return tops
 }
 
+func PrintStacks(stacks []*Stack)  {
+	maxLength := 0
+	for _, stack := range stacks {
+		if len(stack.crates) > maxLength {
+			maxLength = len(stack.crates)
+		}
+	}
+
+	crateLevel := maxLength-1
+	for crateLevel >= 0 {
+		for i := 0; i < len(stacks); i++ {
+			if len(stacks[i].crates) > crateLevel {
+				fmt.Printf("[%s] ", string(stacks[i].crates[crateLevel]))
+			} else {
+				fmt.Printf("    ")
+			}
+		}
+		fmt.Printf("\n")
+		crateLevel--
+	}
+	
+}
 type Stack struct { 
 	crates []rune 
 }
 
-func (s *Stack) push(r rune) {
-	s.crates = append(s.crates, r)
+func (s *Stack) push(r []rune) {
+	s.crates = append(s.crates, r...)
 }
 
-func (s *Stack) pop() rune {
-	r := s.pop()
-	s.crates = s.crates[:len(s-crates)-1]
-	return r
+func (s *Stack) pop(n int) []rune {
+	popped := s.crates[len(s.crates)-n:]
+	s.crates = s.crates[:len(s.crates)-n]
+	return popped
 }
 
-func (s *Stack) head() rune {
+func (s *Stack) peek() rune {
 	return s.crates[len(s.crates)-1]
 }
