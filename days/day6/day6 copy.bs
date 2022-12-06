@@ -20,15 +20,18 @@ func sol(inputFile string, bufferSize int) int {
 	r, ok := util.Read(rs)
 
 	init := make([]rune, bufferSize)
+	lookup := map[rune]bool{}
 	for i := 0; i < bufferSize && ok; i++ {
 		init[i] = asRune(r)
+		lookup[asRune(r)] = true
 		r, ok = util.Read(rs)
 		n++
 	}
 
-	buffer := &Buffer{init, 0, bufferSize}
+	buffer := &Buffer{init, lookup, false, 0, bufferSize}
 	for ok {
 		buffer.shift(asRune(r))
+
 		if buffer.unique() {
 			return n + 1
 		}
@@ -44,26 +47,24 @@ func asRune(str string) rune {
 }
 
 type Buffer struct {
-	runes []rune
-	iter  int
-	size  int
+	runes 	[]rune
+	lookup 	map[rune]bool
+	uniq	 	bool
+	iter  	int
+	size  	int
 }
 
 func (b *Buffer) shift(r rune) {
+	delete(b.lookup, b.runes[b.iter])
+	if b.lookup[r] {
+		b.uniq = true
+	}
 	b.runes[b.iter] = r
 	b.iter++
 	b.iter = b.iter % b.size
+	b.lookup[r] = true	
 }
 
 func (b *Buffer) unique() bool {
-	lookup := map[rune]bool{}
-	for i := 0; i < len(b.runes); i++ {
-		if lookup[b.runes[i]] {
-			return false
-		}
-
-		lookup[b.runes[i]] = true
-	}
-
-	return true
+	return b.uniq
 }
