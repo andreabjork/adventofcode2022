@@ -10,6 +10,7 @@ import (
 func Day7(inputFile string, part int) {
 	fs := newFS()
 	fs.examine(inputFile)
+	fs.tree(fs.root, 0)
 	if part == 0 {
 		fmt.Printf("Total size of small dirs: %d\n", fs.totalSmall())
 	} else {
@@ -18,7 +19,7 @@ func Day7(inputFile string, part int) {
 }
 
 func newFS() *FileSystem {
-	root := &Dir{nil, -1, []int{}, map[string]*Dir{}}
+	root := &Dir{"/", nil, -1, []int{}, map[string]*Dir{}}
 	return &FileSystem{  70000000, 0, root, root, []*Dir{root}}
 }
 
@@ -29,6 +30,7 @@ func newFS() *FileSystem {
 // cd: change pwd into target directory
 // mkdir: create directory at pwd
 // touch: create file
+// tree: prints filesystem
 // totalSmall: sums all dirs with size <= 100000
 // makeSpace: deletes a single directory to have total free space
 //			  at least 30000000
@@ -76,9 +78,24 @@ func (fs *FileSystem) touch(fileSize int) {
 }
 
 func (fs *FileSystem) mkdir(name string) {
-	dir := &Dir{fs.pwd, -1, []int{}, map[string]*Dir{}}
+	dir := &Dir{name, fs.pwd, -1, []int{}, map[string]*Dir{}}
 	fs.dirs = append(fs.dirs, dir)
 	fs.pwd.subdirs[name] = dir
+}
+
+func (fs *FileSystem) tree(from *Dir, tabs int) {
+	space := ""
+	for t := 0; t <= tabs; t++ {
+		space += "  "
+	}
+	//for _, file := range from.files {
+	//	fmt.Printf("%s |- %d\n", space, file)
+	//}
+
+	for _, dir := range from.subdirs {
+		fmt.Printf("%s |- %s(%d)\n", space, dir.name, dir.bytes)
+		fs.tree(dir, tabs+2)
+	}
 }
 
 func (fs *FileSystem) totalSmall() int {
@@ -107,6 +124,7 @@ func (fs *FileSystem) makeSpace() int {
 // DIRECTORIES
 // ===========
 type Dir struct {
+	name 		string
 	parent		*Dir
 	bytes 		int
 	files  		[]int
