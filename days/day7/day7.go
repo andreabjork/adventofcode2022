@@ -11,9 +11,9 @@ func Day7(inputFile string, part int) {
 	fs := newFS()
 	fs.examine(inputFile)
 	if part == 0 {
-		fmt.Printf("Total size: %d\n", fs.totalSmall())
+		fmt.Printf("Total size of small dirs: %d\n", fs.totalSmall())
 	} else {
-		fmt.Printf("Smallest large size: %d\n", fs.makeSpace())
+		fmt.Printf("Delete folder with size: %d\n", fs.makeSpace())
 	}
 }
 
