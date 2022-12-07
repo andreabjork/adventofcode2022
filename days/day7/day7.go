@@ -8,70 +8,80 @@ import (
 )
 
 func Day7(inputFile string, part int) {
-	if part == 0 {
-		fmt.Printf("Total size: %d\n", solveA(inputFile))
-	} else {
-		fmt.Printf("Smallest large size: %d\n", solveB(inputFile))
-	}
-}
-
-
-
-func solveA(inputFile string) int {
-	fs := &FileSystem{  70000000, 0, root, []*Dir{root}}
+	fs := newFS()
 	fs.examine(inputFile)
-}
-
-func solveB(inputFile string) int {
-	ls := util.LineScanner(inputFile)
-	line, ok := util.Read(ls) // skip $ cd / and just start from root
-	line, ok = util.Read(ls)
-
-	// Construct file system from root
-	root := &Dir{"/", nil, -1, []int{}, map[string]*Dir{}}
-	fs := &FileSystem{  70000000, 0, root, []*Dir{root}}
-	dir := root
-	for ok {
-		dir = fs.interpret(line, dir)
-		line, ok = util.Read(ls)
+	if part == 0 {
+		fmt.Printf("Total size: %d\n", fs.totalSmall())
+	} else {
+		fmt.Printf("Smallest large size: %d\n", fs.makeSpace())
 	}
-
-	root.size()
-	fs.used = root.bytes
-	fmt.Println("Total: ", fs.total)
-	fmt.Println("Used: ", fs.used)
-	fmt.Println("Free: ", fs.total - fs.used)
-	toRemove  := 30000000 - (fs.total - fs.used)
-	fmt.Printf("We need to clean %d", toRemove)
-	return fs.findMinOfMax(toRemove)
 }
 
-func solve(inputFile string, handler func() int) int {
-	ls := util.LineScanner(inputFile)
-	line, ok := util.Read(ls) // skip $ cd / and just start from root
-	line, ok = util.Read(ls)
-
-	// Construct file system from root
-	root := &Dir{"/", nil, -1, []int{}, map[string]*Dir{}}
-	fs := &FileSystem{70000000, 0, root, []*Dir{root}}
-	dir := root
-	for ok {
-		dir = fs.interpret(line, dir)
-		line, ok = util.Read(ls)
-	}
-
-	root.size()
-	return fs.countSmall()
+func newFS() *FileSystem {
+	root := &Dir{nil, -1, []int{}, map[string]*Dir{}}
+	return &FileSystem{  70000000, 0, root, root, []*Dir{root}}
 }
 
+// ==============================================================
+// FILESYSTEM
+// --------------------------------------------------------------
+// examine: reads input cmds, executes them and interprets output
+// cd: change pwd into target directory
+// mkdir: create directory at pwd
+// touch: create file
+// totalSmall: sums all dirs with size <= 100000
+// makeSpace: deletes a single directory to have total free space
+//			  at least 30000000
 type FileSystem struct {
 	total   int
 	used 	int
 	root 	*Dir
+	pwd     *Dir
 	dirs	[]*Dir
 }
 
-func (fs *FileSystem) countSmall() int {
+func (fs *FileSystem) examine(inputFile string) {
+	ls := util.LineScanner(inputFile)
+	line, ok := util.Read(ls) // skip $ cd / and just start from root
+	line, ok = util.Read(ls)
+	for ok {
+		parts := strings.Split(line, " ")
+		switch parts[0] {
+		case "$":
+			if parts[1] == "cd" {
+				fs.cd(parts[2])
+			}
+		case "dir":
+			fs.mkdir(parts[1])
+		default:
+			size, _ := strconv.Atoi(parts[0])
+			fs.touch(size)
+
+		}
+		line, ok = util.Read(ls)
+	}
+	fs.root.size()
+}
+
+func (fs *FileSystem) cd(folder string) {
+	if folder == ".." {
+		fs.pwd = fs.pwd.parent
+	} else {
+		fs.pwd = fs.pwd.subdirs[folder]
+	}
+}
+
+func (fs *FileSystem) touch(fileSize int) {
+	fs.pwd.files = append(fs.pwd.files, fileSize)
+}
+
+func (fs *FileSystem) mkdir(name string) {
+	dir := &Dir{fs.pwd, -1, []int{}, map[string]*Dir{}}
+	fs.dirs = append(fs.dirs, dir)
+	fs.pwd.subdirs[name] = dir
+}
+
+func (fs *FileSystem) totalSmall() int {
 	sum := 0
 	for _, dir := range fs.dirs {
 		if dir.bytes <= 100000 {
@@ -81,48 +91,22 @@ func (fs *FileSystem) countSmall() int {
 	return sum
 }
 
-func (fs *FileSystem) findMinOfMax(max int) int {
-	min := 70000000
+func (fs *FileSystem) makeSpace() int {
+	fs.used = fs.root.bytes
+	toRemove  := 30000000 - (fs.total - fs.used)
+	min := fs.total
 	for _, dir := range fs.dirs {
-		fmt.Println("Comparing ", dir.bytes, min)
-		if dir.bytes >= max && dir.bytes < min {
+		if dir.bytes >= toRemove && dir.bytes < min {
 			min = dir.bytes
 		}
 	}
 	return min
 }
 
-// Line contains either an operation,
-// or the result from an operation
-func (fs *FileSystem) interpret(line string, dir *Dir) *Dir {
-	fmt.Println(line)
-	parts := strings.Split(line, " ")
-	if len(parts) == 3 && parts[0] == "$" {
-		if parts[1] == "ls" {
-			return dir
-		} else if parts[1] == "cd" && parts[2] == ".." {
-			// Going back out, sum up the
-			return dir.parent
-		} else if parts[1] == "cd" {
-			return dir.subdirs[parts[2]]
-		}
-	} else if len(parts) == 2 && parts[0] == "dir" {
-		newDir := &Dir{parts[1], dir, -1, []int{}, map[string]*Dir{}}
-		fs.dirs = append(fs.dirs, newDir)
-		dir.subdirs[parts[1]] = newDir
-	} else {
-		size, _ := strconv.Atoi(parts[0])
-		dir.files = append(dir.files, size)
-	}
-
-	return dir
-}
-
 // ===========
 // DIRECTORIES
 // ===========
 type Dir struct {
-	name        string
 	parent		*Dir
 	bytes 		int
 	files  		[]int
@@ -135,8 +119,6 @@ func (d *Dir) size() int {
 		total += dir.size()
 	}
 	d.bytes = total + sum(d.files)
-
-	fmt.Printf("Size for %s: %d \n", d.name, d.bytes)
 	return d.bytes
 }
 
