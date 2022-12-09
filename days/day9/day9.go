@@ -10,9 +10,9 @@ import (
 func Day9(inputFile string, part int) {
 
 	if part == 0 {
-		fmt.Printf("# Visited: %d\n", simulate(inputFile))
+		fmt.Printf("# Visited: %d\n", simulate(inputFile, 2))
 	} else {
-		fmt.Println("Not implmenented.")
+		fmt.Printf("# Visited: %d\n", simulate(inputFile, 10))
 	}
 }
 
@@ -24,9 +24,12 @@ type Knot struct {
 	visited 	int
 }
 
-func simulate(inputFile string) int {
-	head := &Knot{0,0, &Coord{0,0, nil},map[int]map[int]bool{0: {0: true}}, 1}
-	tail := &Knot{0,0, &Coord{0,0, nil},map[int]map[int]bool{0: {0: true}},1}
+func simulate(inputFile string, numKnots int) int {
+	knots := []*Knot{}
+	for i := 0; i < numKnots; i++ {
+		knots = append(knots,
+			&Knot{0,0, &Coord{0,0, nil},map[int]map[int]bool{0: {0: true}}, 1})
+	}
 
 	ls := util.LineScanner(inputFile)
 	line, ok := util.Read(ls)
@@ -35,15 +38,17 @@ func simulate(inputFile string) int {
 		dir := []rune(eles[0])[0]
 		N, _ := strconv.Atoi(eles[1])
 		for i := 0; i < N; i++ {
-			head.move(dir)
-			tail.follow(head)
+			knots[0].move(dir)
+			for j := 1; j < len(knots); j++ {
+				knots[j].follow(knots[j-1])
+			}
 		}
 		fmt.Println("")
 
 		line, ok = util.Read(ls)
 	}
 
-	return tail.visited
+	return knots[len(knots)-1].visited
 }
 
 func (k *Knot) move(dir rune) {
