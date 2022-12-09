@@ -8,7 +8,6 @@ import (
 )
 
 func Day9(inputFile string, part int) {
-
 	if part == 0 {
 		fmt.Printf("# Visited: %d\n", simulate(inputFile, 2))
 	} else {
@@ -16,19 +15,11 @@ func Day9(inputFile string, part int) {
 	}
 }
 
-type Knot struct {
-	x 			int
-	y 			int
-	path    	*Coord
-	lookup    	map[int]map[int]bool
-	visited 	int
-}
-
 func simulate(inputFile string, numKnots int) int {
 	knots := []*Knot{}
 	for i := 0; i < numKnots; i++ {
 		knots = append(knots,
-			&Knot{0,0, &Coord{0,0, nil},map[int]map[int]bool{0: {0: true}}, 1})
+			&Knot{0,0,map[int]map[int]bool{0: {0: true}}, 1})
 	}
 
 	ls := util.LineScanner(inputFile)
@@ -37,18 +28,28 @@ func simulate(inputFile string, numKnots int) int {
 		eles := strings.Split(line, " ")
 		dir := []rune(eles[0])[0]
 		N, _ := strconv.Atoi(eles[1])
+		// For each step, move the head and let the rest follow
 		for i := 0; i < N; i++ {
 			knots[0].move(dir)
 			for j := 1; j < len(knots); j++ {
 				knots[j].follow(knots[j-1])
 			}
 		}
-		fmt.Println("")
 
 		line, ok = util.Read(ls)
 	}
 
 	return knots[len(knots)-1].visited
+}
+
+// =====
+// KNOTS
+// =====
+type Knot struct {
+	x 			int
+	y 			int
+	lookup    	map[int]map[int]bool
+	visited 	int
 }
 
 func (k *Knot) move(dir rune) {
@@ -91,7 +92,10 @@ func (k *Knot) follow(h *Knot) {
 		k.move('D')
 	}
 
-	next := &Coord{k.x, k.y, k.path}
+	k.trackVisit()
+}
+
+func (k *Knot) trackVisit() {
 	if !k.lookup[k.x][k.y] {
 		if k.lookup[k.x] == nil {
 			k.lookup[k.x] = map[int]bool{}
@@ -99,14 +103,6 @@ func (k *Knot) follow(h *Knot) {
 		k.lookup[k.x][k.y] = true
 		k.visited++
 	}
-	k.path = next
-	fmt.Printf("-> (%d,%d) ", k.x, k.y)
-}
-
-type Coord struct {
-	x  			int
-	y 			int
-	from 		*Coord
 }
 
 func abs(a int) int {
