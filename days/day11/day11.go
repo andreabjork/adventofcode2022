@@ -10,15 +10,20 @@ import (
 )
 
 func Day11(inputFile string, part int) {
-	monkeys := makeMonkeys(inputFile)
+	var rounds int
+	var curbWorry bool
 	if part == 0 {
-		fmt.Printf("Level of monkey business: %d\n", MonkeyBusiness(monkeys, 20))
+		rounds = 20
+		curbWorry = true
 	} else if part == 1 {
-	    fmt.Printf("Level of monkey business: %d\n", MonkeyBusiness(monkeys,10000))
+		rounds = 10000
+		curbWorry = false
 	}
+	monkeys := makeMonkeys(inputFile, curbWorry)
+	fmt.Printf("Level of monkey business: %d\n", MonkeyBusiness(monkeys, rounds, curbWorry))
 }
 
-func MonkeyBusiness(monkeys []*Monkey, rounds int) int {
+func MonkeyBusiness(monkeys []*Monkey, rounds int, curbWorry bool) int {
 	inspections := make([]int, len(monkeys))
 	for r := 0; r < rounds; r++{
 		for m := 0; m < len(monkeys); m++ {
@@ -28,6 +33,10 @@ func MonkeyBusiness(monkeys []*Monkey, rounds int) int {
 			hasItem, item := monkey.pop()
 			for hasItem {
 				monkey.op(item)
+				if curbWorry {
+					item.value = item.value/3
+					item.reconcile()
+				}
 				throwTo = monkey.modOp(item)
 				monkeys[throwTo].push(item)
 				hasItem, item = monkey.pop()
@@ -73,6 +82,13 @@ type Item struct {
 	value 		int
 }
 
+// Reconciles modulo map by the current value (pt 1)
+func (i *Item) reconcile() {
+	for m, _ := range i.modulos {
+		i.modulos[m] = i.value % m
+	}
+}
+
 func (i *Item) mod(m int) int {
 	return  i.modulos[m]
 }
@@ -80,7 +96,9 @@ func (i *Item) mod(m int) int {
 func add(x int) func(*Item) {
 	// (x + y) mod m == x mod m + y mod m
 	return func (i *Item) {
-		i.value += x
+		if i.value != -1 {
+			i.value += x
+		}
 		for m, _ := range i.modulos {
 			i.modulos[m] = (i.modulos[m] + x % m)%m
 		}
@@ -90,7 +108,9 @@ func add(x int) func(*Item) {
 func double() func(*Item) {
 	// (x + x) mod m = x mod m + x mod m
 	return func(i *Item) {
-		i.value += i.value
+		if i.value != -1 {
+			i.value += i.value
+		}
 		for m, _ := range i.modulos {
 			i.modulos[m] = (i.modulos[m] + i.modulos[m]) % m
 		}
@@ -99,7 +119,9 @@ func double() func(*Item) {
 
 func pow2() func(*Item) {
 	return func(i *Item) {
-		i.value *= i.value
+		if i.value != -1 {
+			i.value *= i.value
+		}
 		for m, _ := range i.modulos {
 			i.modulos[m] = (i.modulos[m]*i.modulos[m])%m
 		}
@@ -108,7 +130,9 @@ func pow2() func(*Item) {
 
 func multiply(p int) func(*Item) {
 	return func(i *Item) {
-		i.value *= p
+		if i.value != -1 {
+			i.value *= p
+		}
 		for m, _ := range i.modulos {
 			i.modulos[m] = (p*i.modulos[m])%m
 		}
@@ -118,7 +142,7 @@ func multiply(p int) func(*Item) {
 // =============
 // PARSING INPUT
 // =============
-func makeMonkeys(inputFile string) []*Monkey {
+func makeMonkeys(inputFile string, trackValues bool) []*Monkey {
 	txt, _ := os.ReadFile(inputFile)
 	re := regexp.MustCompile(
 		`Monkey (\d+):
@@ -197,6 +221,9 @@ func makeMonkeys(inputFile string) []*Monkey {
 		for _, item := range monkey.items {
 			for _, modulo := range modulosToTrack {
 				item.modulos[modulo] = item.value % modulo
+			}
+			if !trackValues {
+				item.value = -1
 			}
 		}
 	}
