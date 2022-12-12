@@ -18,49 +18,18 @@ func Day12(inputFile string, part int) {
 
 func solve(inputFile string) *Node {
 	d := &DTree{map[int]map[int]*Node{}, nil, 0, 0}
-	unvisited, start, _, rows, cols := parse(inputFile)
+	unvisited, start, finish, rows, cols := parse(inputFile)
 	d.rows = rows
 	d.cols = cols
+
 	// Set starting node
 	d.spt[start.x] = map[int]*Node{}
 	d.spt[start.x][start.y] = start
 	d.bestSignal = start
 
-	//fmt.Println("all unvisited")
-	//for i := 0; i < len(unvisited); i++ {
-	//	fmt.Printf("%d,%d = %s\n", unvisited[i].x, unvisited[i].y, string(unvisited[i].height))
-	//}
-
 	d.dijkstra(unvisited)
 	d.show()
-
-	fmt.Println("a=",int('a'))
-	fmt.Println("b=",int('b'))
-	fmt.Println("c=",int('c'))
-	fmt.Println("d=",int('d'))
-	fmt.Println("e=",int('e'))
-	fmt.Println("f=",int('f'))
-	fmt.Println("g=",int('g'))
-	fmt.Println("h=",int('h'))
-	fmt.Println("i=",int('i'))
-	fmt.Println("j=",int('j'))
-	fmt.Println("k=",int('k'))
-	fmt.Println("l=",int('l'))
-	fmt.Println("m=",int('m'))
-	fmt.Println("n=",int('n'))
-	fmt.Println("o=",int('o'))
-	fmt.Println("p=",int('p'))
-	fmt.Println("q=",int('q'))
-	fmt.Println("r=",int('r'))
-	fmt.Println("s=",int('s'))
-	fmt.Println("t=",int('t'))
-	fmt.Println("u=",int('u'))
-	fmt.Println("v=",int('v'))
-	fmt.Println("w=",int('w'))
-	fmt.Println("x=",int('x'))
-	fmt.Println("y=",int('y'))
-	fmt.Println("z=",int('z'))
-	return d.bestSignal
+	return finish
 }
 
 const MAX_INT = int(^uint(0) >> 1)
@@ -140,7 +109,11 @@ func (d *DTree) dijkstra(unvisited []*Node) {
 }
 
 func reachable(from, to *Node) bool {
-	return util.Abs(int(from.height)-int(to.height)) <= 1
+	if int(to.height) > int(from.height) {
+		return util.Abs(int(from.height)-int(to.height)) <= 1
+	} else {
+		return true
+	}
 }
 
 func (d *DTree) updateBestSignal(n *Node) {
