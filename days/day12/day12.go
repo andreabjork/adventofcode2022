@@ -6,73 +6,34 @@ import (
 )
 
 func Day12(inputFile string, part int) {
+	fixedStart, bestStart := solve(inputFile)
 	if part == 0 {
-		bestSignal := solve(inputFile)
-		fmt.Printf("Best signal is at %s, reachable in steps: %d\n", string(bestSignal.height), bestSignal.shortestPath)
+		fmt.Printf("Steps to E: %d\n", fixedStart.shortestPath)
 	} else {
-		fmt.Println("Not implmenented.")
+		fmt.Printf("Steps to best S: %d\n", bestStart.shortestPath)
 	}
 }
 
+func solve(inputFile string) (*Node, *Node) {
+	d := &DTree{map[int]map[int]*Node{}, nil}
+	unvisited, S, E := parse(inputFile)
 
-
-func solve(inputFile string) *Node {
-	d := &DTree{map[int]map[int]*Node{}, nil, 0, 0}
-	unvisited, start, finish, rows, cols := parse(inputFile)
-	d.rows = rows
-	d.cols = cols
-
-	// Set starting node
-	d.spt[start.x] = map[int]*Node{}
-	d.spt[start.x][start.y] = start
-	d.bestSignal = start
-
+	// Set starting node at E and find shortest path to every other node (including s)
+	d.spt[E.x] = map[int]*Node{}
+	d.spt[E.x][E.y] = E
+	d.bestStart = E
 	d.dijkstra(unvisited)
-	d.show()
-	return finish
+	return S, d.bestStart
 }
 
 const MAX_INT = int(^uint(0) >> 1)
 
-type Node struct {
-	x				int
-	y 				int
-	height 			rune
-	shortestPath	int
-}
-
+// ===========================
+// Dijkstra Shortest-Path-Tree
+// ===========================
 type DTree struct {
 	spt 		map[int]map[int]*Node
-	// Because E is not always reachable, track this:
-	bestSignal 	*Node
-	rows 		int
-	cols 		int
-}
-
-func (d *DTree) show() {
-	for i := 0; i < d.rows; i++ {
-		for j := 0; j < d.cols; j++ {
-			if node, exists := d.spt[i][j]; exists {
-				fmt.Printf("%d ", node.shortestPath)
-			} else {
-				// unreachable nodes
-				fmt.Printf(". ")
-			}
-		}
-		fmt.Println("")
-	}
-
-	for i := 0; i < d.rows; i++ {
-		for j := 0; j < d.cols; j++ {
-			if node, exists := d.spt[i][j]; exists {
-				fmt.Printf("%s", string(node.height))
-			} else {
-				// unreachable nodes
-				fmt.Printf(".")
-			}
-		}
-		fmt.Println("")
-	}
+	bestStart 	*Node
 }
 
 func (d *DTree) dijkstra(unvisited []*Node) {
@@ -80,18 +41,12 @@ func (d *DTree) dijkstra(unvisited []*Node) {
 	i := 0
 	foundSome := false
 	for len(unvisited) > 0 {
-		if reachable, fromNode := d.findBest(unvisited[i]); reachable {
-			// Visit node
-			unvisited[i].shortestPath = fromNode.shortestPath+1
-			if d.spt[unvisited[i].x] == nil {
-				d.spt[unvisited[i].x] = map[int]*Node{}
-			}
-			// Add node to visited
-			d.spt[unvisited[i].x][unvisited[i].y] = unvisited[i]
-			d.updateBestSignal(unvisited[i])
-
+		if reachable, fromNode := d.findBestNeighbour(unvisited[i]); reachable {
+			d.visit(unvisited[i], fromNode)
+			d.updateBestStart(unvisited[i])
 			d.updateNeighbours(unvisited[i])
-			// remove this from unvisited
+
+			// remove node from unvisited
 			unvisited = append(unvisited[0:i], unvisited[i+1:]...)
 			i--
 			foundSome = true
@@ -100,6 +55,7 @@ func (d *DTree) dijkstra(unvisited []*Node) {
 		if i == len(unvisited) {
 			i = 0
 			if !foundSome {
+				// some nodes might be unreachable
 				break
 			} else {
 				foundSome = false
@@ -108,88 +64,88 @@ func (d *DTree) dijkstra(unvisited []*Node) {
 	}
 }
 
-func reachable(from, to *Node) bool {
-	if int(to.height) > int(from.height) {
+func (d *DTree) visit(n *Node, fromNode *Node) {
+	n.shortestPath = fromNode.shortestPath+1
+	if d.spt[n.x] == nil {
+		d.spt[n.x] = map[int]*Node{}
+	}
+	d.spt[n.x][n.y] = n
+}
+
+func (d *DTree) updateBestStart(n *Node) {
+	if n.height < d.bestStart.height {
+		d.bestStart = n
+	} else if n.height == d.bestStart.height && n.shortestPath < d.bestStart.shortestPath {
+		d.bestStart = n
+	}
+}
+
+func (d *DTree) findBestNeighbour(n *Node) (bool, *Node) {
+	minPath := MAX_INT
+	var bestNeighbour *Node
+	minPath, bestNeighbour = d.compareToNeighbour(n, n.x-1, n.y, minPath, bestNeighbour)
+	minPath, bestNeighbour = d.compareToNeighbour(n, n.x+1, n.y, minPath, bestNeighbour)
+	minPath, bestNeighbour = d.compareToNeighbour(n, n.x, n.y-1, minPath, bestNeighbour)
+	minPath, bestNeighbour = d.compareToNeighbour(n, n.x, n.y+1, minPath, bestNeighbour)
+
+	return bestNeighbour != nil, bestNeighbour
+}
+
+func (d *DTree) compareToNeighbour(n *Node, i, j, min int, best *Node) (int, *Node) {
+	m, exists := d.spt[i][j]
+	if exists && n.reachableFrom(m) {
+		if m.shortestPath+1 < min {
+			min = m.shortestPath+1
+			best = m
+		}
+	}
+
+	return min, best
+}
+
+func (d *DTree) updateNeighbours(n *Node) {
+	// up, down, left right
+	d.updateSingle(n,n.x-1,n.y)
+	d.updateSingle(n,n.x+1,n.y)
+	d.updateSingle(n,n.x,n.y-1)
+	d.updateSingle(n,n.x,n.y+1)
+}
+
+func (d *DTree) updateSingle(here *Node, i, j int) {
+	neighbour, exists := d.spt[i][j]
+	if exists && neighbour.reachableFrom(here) && here.shortestPath + 1 < neighbour.shortestPath {
+		neighbour.shortestPath = here.shortestPath+1
+		d.updateBestStart(neighbour)
+		d.updateNeighbours(neighbour)
+	}
+}
+
+// ====
+// Node
+// ====
+type Node struct {
+	x				int
+	y 				int
+	height 			rune
+	shortestPath	int
+}
+
+func (to *Node) reachableFrom(from *Node) bool {
+	if int(to.height) < int(from.height) {
 		return util.Abs(int(from.height)-int(to.height)) <= 1
 	} else {
 		return true
 	}
 }
 
-func (d *DTree) updateBestSignal(n *Node) {
-	if n.height > d.bestSignal.height {
-		d.bestSignal = n
-	} else if n.height == d.bestSignal.height && n.shortestPath < d.bestSignal.shortestPath {
-		d.bestSignal = n
-	}
-}
-func (d *DTree) findBest(n *Node) (bool, *Node) {
-	up, uExists := d.spt[n.x-1][n.y]
-	down, dExists := d.spt[n.x+1][n.y]
-	left, lExists := d.spt[n.x][n.y-1]
-	right, rExists := d.spt[n.x][n.y+1]
-
-	minPath := MAX_INT
-	var bestNeighbour *Node
-	if lExists && reachable(left, n) {
-		if left.shortestPath+1 < minPath {
-			minPath = left.shortestPath+1
-			bestNeighbour = left
-		}
-	}
-
-	if rExists && reachable(right, n) {
-		if right.shortestPath+1 < minPath {
-			minPath = right.shortestPath+1
-			bestNeighbour = right
-		}
-	}
-
-	if uExists && reachable(up, n) {
-		if up.shortestPath+1 < minPath {
-			minPath = up.shortestPath+1
-			bestNeighbour = up
-		}
-	}
-
-	if dExists && reachable(down, n) {
-		if down.shortestPath+1 < minPath {
-			minPath = down.shortestPath+1
-			bestNeighbour = down
-		}
-	}
-
-	return bestNeighbour != nil, bestNeighbour
-}
-
-func (d *DTree) updateSingle(here *Node, i, j int) {
-	neighbour, exists := d.spt[i][j]
-	if exists && reachable(here, neighbour) && here.shortestPath + 1 < neighbour.shortestPath {
-		neighbour.shortestPath = here.shortestPath+1
-		d.updateBestSignal(neighbour)
-		d.updateNeighbours(neighbour)
-	}
-}
-
-func (d *DTree) updateNeighbours(n *Node) {
-	// up
-	d.updateSingle(n,n.x-1,n.y)
-	// down
-	d.updateSingle(n,n.x+1,n.y)
-	// left
-	d.updateSingle(n,n.x,n.y-1)
-	// right
-	d.updateSingle(n,n.x,n.y+1)
-}
-
 // =============
 // PARSING INPUT
 // =============
-func parse(inputFile string) ([]*Node, *Node, *Node, int, int) {
+func parse(inputFile string) ([]*Node, *Node, *Node) {
 	ls := util.LineScanner(inputFile)
 	line, ok := util.Read(ls)
 
-	var start, finish *Node
+	var S, E *Node
 	unvisited := []*Node{}
 	i := 0
 	M := 0
@@ -199,20 +155,20 @@ func parse(inputFile string) ([]*Node, *Node, *Node, int, int) {
 		for j := 0; j < M; j++ {
 			r := runes[j]
 			if r == 'S' {
-				start = &Node {
+				S = &Node {
 					i,
 					j,
 					'a',
-					0,
+					MAX_INT,
 				}
+				unvisited = append(unvisited, S)
 			} else if r == 'E' {
-				finish = &Node {
+				E = &Node {
 					i,
 					j,
 					'z',
-					MAX_INT,
+					0,
 				}
-				unvisited = append(unvisited, finish)
 			} else {
 				unvisited = append(unvisited,
 					&Node{
@@ -227,8 +183,6 @@ func parse(inputFile string) ([]*Node, *Node, *Node, int, int) {
 		line, ok = util.Read(ls)
 		i++
 	}
-	rows := i
-	cols := M
 
-	return unvisited, start, finish, rows, cols
+	return unvisited, S, E
 }
