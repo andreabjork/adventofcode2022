@@ -8,10 +8,31 @@ import (
 
 func Day13(inputFile string, part int) {
 	if part == 0 {
-		fmt.Printf("Packets in right order: %d\n", solve(inputFile))
+		fmt.Printf("Packets in right order: %d\n", solveA(inputFile))
 	} else {
 		fmt.Printf("Decoder Key: %d\n", solveB(inputFile))
 	}
+}
+
+func solveA(inputFile string) int {
+	ls := util.LineScanner(inputFile)
+	lstr, _ := util.Read(ls)
+	rstr, ok := util.Read(ls)
+	sum := 0
+	pairNum := 1
+	for ok {
+		left := &Packet{lstr, 0}
+		right := &Packet{rstr, 0}
+		ordered := left.leq(right)
+		if ordered {
+			sum += pairNum
+		}
+		pairNum += 1
+		_, ok = util.Read(ls)
+		lstr, _ = util.Read(ls)
+		rstr, _ = util.Read(ls)
+	}
+	return sum
 }
 
 func solveB(inputFile string) int {
@@ -26,16 +47,8 @@ func solveB(inputFile string) int {
 			str, ok = util.Read(ls)
 		}
 	}
-
 	key.place(&Packet{"[[2]]", 0})
 	key.place(&Packet{"[[6]]", 0})
-
-	fmt.Println("ORDERING:")
-	for i := 0; i < len(key.packets); i++ {
-		fmt.Printf("%s\n", key.packets[i].bits)
-	}
-	fmt.Println("-----------")
-
 	div2 := -1
 	div6 := -1
 	for i, packet := range key.packets {
@@ -51,35 +64,7 @@ func solveB(inputFile string) int {
 			}
 		}
 	}
-	fmt.Println("[[2]] at ", div2)
-	fmt.Println("[[2]] at ", div6)
 	return (div2+1)*(div6+1)
-}
-
-func solve(inputFile string) int {
-	ls := util.LineScanner(inputFile)
-	lstr, _ := util.Read(ls)
-	rstr, ok := util.Read(ls)
-	sum := 0
-	pairNum := 1
-	for ok {
-		left := &Packet{lstr, 0}
-		right := &Packet{rstr, 0}
-
-		fmt.Printf("Finding order of\n%s\n%s\n", left.bits, right.bits)
-		ordered := left.leq(right)
-		fmt.Println("---------------")
-		if ordered {
-			sum += pairNum
-		}
-		pairNum += 1
-
-		_, ok = util.Read(ls)
-		lstr, _ = util.Read(ls)
-		rstr, _ = util.Read(ls)
-	}
-
-	return sum
 }
 
 type Key struct {
@@ -100,6 +85,7 @@ func (k *Key) place(p *Packet) {
 			break
 		}
 	}
+	// Create new ordered packet list
 	if idx == len(k.packets) {
 		k.packets = append(k.packets[:idx], p)
 	} else {
@@ -130,34 +116,25 @@ func (left *Packet) leq(right *Packet) bool {
 		lNext := left.next()
 		rNext := right.next()
 		if lNext != rNext {
-			// If left and right are not identical, we have the following (ordered) options:
-			// 		1. either is ] (ran out of items)
-			// 		2. both are int (compare)
-			// 		3. neither is int (, [) (ran out of items)
-			//      4. either is int -> modify x to [ x ]
-			if lNext == "]" {
-				// left ran out first
-				break
-			} else if rNext == "]" {
-				ordered = false
-				break
-			}
 			leftInt, lIsInt := strconv.Atoi(lNext)
 			rightInt, rIsInt := strconv.Atoi(rNext)
+			// 		1. both are int (compare)
 			if lIsInt == nil && rIsInt == nil {
-				// if unequal ints, compare value
 				if leftInt < rightInt {
 					break
 				} else {
 					ordered = false
 					break
 				}
+			// 		2. neither is int (] , [) (ran out of items)
 			} else if lIsInt != nil && rIsInt != nil {
 				// neither value is an integer (, ] [)
-				if left.hasNext() && !right.hasNext() {
+				if !right.hasNext() || rNext == "]" {
+					// right ran out
 					ordered = false
 				}
 				break
+			//      3. either is int -> modify x to [ x ]
 			} else if rIsInt != nil {
 				// right is not int
 				left.push("["+lNext+"]")
@@ -170,7 +147,6 @@ func (left *Packet) leq(right *Packet) bool {
 		}
 		leftHasNext = left.hasNext()
 	}
-	// left ran out of items first: ok
 
 	// Return the packets to their original state because they've been modified:
 	left.bits = immutableLeft
