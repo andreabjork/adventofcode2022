@@ -128,19 +128,15 @@ func (left *Packet) leq(right *Packet) bool {
 				}
 			// 		2. neither is int (] , [) (ran out of items)
 			} else if lIsInt != nil && rIsInt != nil {
-				// neither value is an integer (, ] [)
 				if !right.hasNext() || rNext == "]" {
-					// right ran out
 					ordered = false
 				}
 				break
 			//      3. either is int -> modify x to [ x ]
 			} else if rIsInt != nil {
-				// right is not int
 				left.push("["+lNext+"]")
 				right.push(rNext)
 			} else if lIsInt != nil {
-				// left is not int
 				right.push("["+rNext+"]")
 				left.push(lNext)
 			}
