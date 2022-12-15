@@ -17,9 +17,9 @@ func Day15(inputFile string, part int) {
 		}
 	} else {
 		if strings.Contains(inputFile, "0.txt") {
-			fmt.Printf("Tuning Frequency: %d\n", solveB(inputFile, 20))
+			fmt.Printf("Tuning Frequency: %d\n", solveB(inputFile, 4000001))
 		} else if strings.Contains(inputFile, "1.txt") {
-			fmt.Printf("Tuning Frequency: %d\n", solveB(inputFile, 4000000))
+			fmt.Printf("Tuning Frequency: %d\n", solveB(inputFile, 21))
 		}
 	}
 }
@@ -56,7 +56,6 @@ type Point struct {
 func (n *Network) locate(maxX, maxY int) *Point {
 	for y := util.Max(0, n.minY); y < util.Min(n.minY+n.width, maxY); y++ {
 		if p := n.locateInStrip(y, maxX); p != nil {
-			fmt.Printf("LOCATED x,y=%d,%d\n",p.x ,p.y)
 			return p
 		}
 	}
@@ -65,17 +64,27 @@ func (n *Network) locate(maxX, maxY int) *Point {
 
 func (n *Network) locateInStrip(y int, maxX int) *Point {
 	found := false
+	foundBeacon := false
+	foundSensor := false
+
 	for x := util.Max(0,n.minX); x < util.Min(maxX, n.minX+n.width); x++ {
 		for _, s := range n.sensors {
-			if !(s.beacon.x == x && s.beacon.y == y) && !(s.loc.x == x && s.loc.y == y) && s.loc.d(&Point{x,y}) <= s.dist {
+			if s.beacon.x == x && s.beacon.y == y {
+				foundBeacon = true
+			} else if s.loc.x == x && s.loc.y == y {
+				foundSensor = true
+			} else if s.loc.d(&Point{x,y}) <= s.dist {
 				found = true
 				break
 			}
 		}
-		if !found {
+
+		if !found && !foundBeacon && !foundSensor {
 			return &Point{x, y}
 		}
 		found = false
+		foundBeacon = false
+		foundSensor = false
 	}
 	return nil
 }

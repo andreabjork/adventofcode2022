@@ -47,7 +47,7 @@ func VisualizeB(inputFile string) {
 	c := MakeCave(inputFile, true)
 	vis := &Visualization{
 		width: c.maxX-c.minX,
-		height: c.maxY-350,
+		height: c.maxY-370,
 		score:  0,
 		isOver: false,
 	}
@@ -85,7 +85,7 @@ type Visualization struct {
 }
 
 func (vis *Visualization) moveInterval() time.Duration {
-	ms := 3
+	ms := 1
 	return time.Duration(ms) * time.Millisecond
 }
 
