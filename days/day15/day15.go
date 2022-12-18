@@ -32,7 +32,9 @@ func solveA(inputFile string, y int) int {
 
 func solveB(inputFile string, max int) int {
 	n := parse(inputFile)
-	return n.locate(max, max).tf()
+	p := n.locate(max, max)
+	fmt.Printf("Found it! %d,%d\n", p.x, p.y)
+	return p.tf()
 }
 
 type Network struct {
@@ -54,39 +56,71 @@ type Point struct {
 }
 
 func (n *Network) locate(maxX, maxY int) *Point {
-	for y := util.Max(0, n.minY); y < util.Min(n.minY+n.width, maxY); y++ {
-		if p := n.locateInStrip(y, maxX); p != nil {
+	for i := 0; i < len(n.sensors); i++ {
+		p := n.locateAround(n.sensors[i], maxX, maxY)
+		if p != nil {
 			return p
 		}
 	}
+
 	return nil
 }
 
-func (n *Network) locateInStrip(y int, maxX int) *Point {
-	found := false
-	foundBeacon := false
-	foundSensor := false
+func (n *Network) locateAround(s *Sensor, maxX, maxY int) *Point {
 
-	for x := util.Max(0,n.minX); x < util.Min(maxX, n.minX+n.width); x++ {
-		for _, s := range n.sensors {
-			if s.beacon.x == x && s.beacon.y == y {
-				foundBeacon = true
-			} else if s.loc.x == x && s.loc.y == y {
-				foundSensor = true
-			} else if s.loc.d(&Point{x,y}) <= s.dist {
-				found = true
-				break
-			}
+	// Look on the border of the sensor, it must be on the border of
+	// one of them as we know there is exactly one
+	// | x + r | + | y + s | = s.dist+1
+	x := s.loc.x
+	y := s.dist+1 + s.loc.y
+	for util.Abs(s.loc.x-x)+util.Abs(s.loc.y-y) == s.dist+1 {
+		if x > 0 && x < maxX && y > 0 && y < maxY && !n.detectedByOthers(x,y) {
+			return &Point{x,y}
 		}
-
-		if !found && !foundBeacon && !foundSensor {
-			return &Point{x, y}
-		}
-		found = false
-		foundBeacon = false
-		foundSensor = false
+		x++
+		y++
 	}
+
+	x = s.loc.x
+	y = -s.dist+1 + s.loc.y
+	for util.Abs(s.loc.x-x)+util.Abs(s.loc.y-y) == s.dist+1 {
+		if x > 0 && x < maxX && y > 0 && y < maxY && !n.detectedByOthers(x,y) {
+			return &Point{x,y}
+		}
+		x--
+		y--
+	}
+
+	x = s.dist+1 + s.loc.x
+	y = s.loc.y
+	for util.Abs(s.loc.x-x)+util.Abs(s.loc.y-y) == s.dist+1 {
+		if x > 0 && x < maxX && y > 0 && y < maxY && !n.detectedByOthers(x,y) {
+			return &Point{x,y}
+		}
+		x--
+		y++
+	}
+	x = -s.dist+1 + s.loc.x
+	y = s.loc.y
+	for util.Abs(s.loc.x-x)+util.Abs(s.loc.y-y) == s.dist+1 {
+		if x > 0 && x < maxX && y > 0 && y < maxY && !n.detectedByOthers(x,y) {
+			return &Point{x,y}
+		}
+		x++
+		y--
+	}
+
 	return nil
+}
+
+func (n *Network) detectedByOthers(x, y int) bool {
+	p := &Point{x,y}
+	for _, s := range n.sensors {
+		if s.loc.d(p) <= s.dist {
+			return true
+		}
+	}
+	return false
 }
 
 func (n *Network) mapStrip(y int) int {
