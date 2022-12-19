@@ -21,6 +21,14 @@ func Abs(x int) int {
 	return x
 }
 
+func Sum(arr []int) int {
+	sum := 0
+	for _, a := range arr {
+		sum += a
+	}
+	return sum
+}
+
 func Pow(x int, n int) int {
 	val := 1
 	for i := 0; i < n; i++ {
