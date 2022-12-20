@@ -14,9 +14,9 @@ func Day14(inputFile string, part int) {
 	case 1:
 		fmt.Printf("Grains of sand: %d\n", SimulateB(inputFile))
 	case 2:
-		VisualizeA(inputFile)
+		//VisualizeA(inputFile)
 	case 3:
-		VisualizeB(inputFile)
+		//VisualizeB(inputFile)
 	}
 }
 
