@@ -62,7 +62,7 @@ var dayfuncs = map[int]interface{}{
 
 func main() {
 	if len(os.Args) < 3 {
-		fmt.Printf("Run as:\n\tgo run main.go [day] [0|1] [0-9:optional,picks 0.txt by default]")
+		fmt.Printf("Run as:\n\tgo run main.go [day] [0|1] [0-9:optional,picks 1.txt by default]")
 		return
 	}
 
