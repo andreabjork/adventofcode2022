@@ -29,7 +29,7 @@ func solve(inputFile string) int {
 	}
 
 	//fmt.Println("Len array: ", len(arr))
-	arr = applyKey(arr, 811589153)
+	//arr = applyKey(arr, 811589153)
 	arr = decrypt(arr)
 	zIndex := 0
 	for i := 0; i < len(arr); i++ {
@@ -59,6 +59,7 @@ func decrypt(arr []*Ele) []*Ele {
 	i := 0
 	k := 0
 	for count < len(arr) {
+		fmt.Println(i)
 		//fmt.Println(count)
 		arr, k = move(arr, i)
 		if k == -1 {
