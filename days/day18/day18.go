@@ -17,7 +17,7 @@ func Day18(inputFile string, part int) {
 
 const MAX_INT = int(^uint(0) >> 1)
 func solve(inputFile string, exteriorOnly bool) int {
-	a := &Area{map[int]map[int]map[int]int{}, 0, nil, MAX_INT, -MAX_INT, MAX_INT, -MAX_INT, MAX_INT, -MAX_INT}
+	a := NewArea()
 	ls := util.LineScanner(inputFile)
 	line, ok := util.Read(ls)
 	for ok {
@@ -41,11 +41,16 @@ type Area struct {
 	minX,maxX,minY,maxY,minZ,maxZ int
 }
 
+func NewArea() *Area {
+	return &Area{map[int]map[int]map[int]int{}, 0, nil, MAX_INT, -MAX_INT, MAX_INT, -MAX_INT, MAX_INT, -MAX_INT}
+}
+
 func (a *Area) findTrappedAir() {
+	a.trapped = NewArea()
 	for x := a.minX; x <= a.maxX; x++{
 		for y := a.minY; y <= a.maxY; y++ {
 			for z := a.minZ; z <= a.maxZ; z++ {
-				expanse := &Area{map[int]map[int]map[int]int{}, 0, nil, MAX_INT, -MAX_INT, MAX_INT, -MAX_INT, MAX_INT, -MAX_INT}
+				expanse := NewArea()
 				unbounded := a.expandFrom(&Point{x,y,z}, expanse)
 				if !unbounded {
 					a.addTrapped(expanse)
@@ -56,9 +61,6 @@ func (a *Area) findTrappedAir() {
 }
 
 func (a *Area) addTrapped(b *Area) {
-	if a.trapped == nil {
-		a.trapped = &Area{map[int]map[int]map[int]int{}, 0, nil, MAX_INT, -MAX_INT, MAX_INT, -MAX_INT, MAX_INT, -MAX_INT}
-	}
 	for x, p := range b.points {
 		for y, pp := range p {
 			for z, _ := range pp {
