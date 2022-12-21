@@ -4,7 +4,6 @@ import (
 	"adventofcode/m/v2/util"
 	"fmt"
 	"strconv"
-	"time"
 )
 
 func Day20(inputFile string, part int) {
@@ -18,112 +17,97 @@ func Day20(inputFile string, part int) {
 func solve(inputFile string, times int, key int) int {
 	ls := util.LineScanner(inputFile)
 
-	arr := []*Ele{}
-	order := []*Ele{}
+	var e, zero *Ele
 	line, ok := util.Read(ls)
-	it := 0
+	// Grab the first
+	num, _ := strconv.Atoi(line)
+	first := &Ele{num*key, nil, nil}
+	arr := []*Ele{first}
+
+	prev := first
+	line, ok = util.Read(ls)
 	for ok {
 		num, _ := strconv.Atoi(line)
-		e := &Ele{num*key, it}
-		it++
+		e = &Ele{num*key, nil, prev}
+
+		prev.next = e
+		prev = e
+		if num == 0 {
+			zero = e
+		}
 		arr = append(arr, e)
-		order = append(order, e)
 		line, ok = util.Read(ls)
 	}
 
-	arr = decrypt(arr, times)
-	//fmt.Println("After:")
-	//print(arr)
-	zIndex := 0
-	for i := 0; i < len(arr); i++ {
-		if arr[i].val == 0 {
-			zIndex = i
-			//fmt.Println("Found it", zIndex)
-			break
-		}
-	}
+	// Connect the circle
+	first.prev = e
+	e.next = first
 
-	//fmt.Println("z + 1000", zIndex+1000)
-	//fmt.Println("z + 1000 mod len ", (zIndex+1000)%len(arr))
-	//fmt.Println("val ", arr[(zIndex+1000)%len(arr)])
-	//fmt.Println(arr[(zIndex+1000)%len(arr)].val)
-	//fmt.Println(arr[(zIndex+2000)%len(arr)].val)
-	//fmt.Println(arr[(zIndex+3000)%len(arr)].val)
-	//fmt.Println(arr[(zIndex+1000)%(len(arr)-1)].val)
-	//fmt.Println(arr[(zIndex+2000)%(len(arr)-1)].val)
-	//fmt.Println(arr[(zIndex+3000)%(len(arr)-1)].val)
-	return arr[(zIndex+1000)%len(arr)].val + arr[(zIndex+2000)%len(arr)].val + arr[(zIndex+3000)%len(arr)].val
-
+	arr = mix(arr, times)
+	afterOT := zero.stepForward(1000)
+	afterTT := afterOT.stepForward(1000)
+	afterTHT := afterTT.stepForward(1000)
+	return afterOT.val + afterTT.val + afterTHT.val
 }
 
+
+func mix(arr []*Ele, times int) []*Ele {
+	for t := 0; t < times; t++ {
+		for i := 0; i < len(arr); i++ {
+			mixElement(arr[i], len(arr)-1)
+		}
+	}
+	return arr
+}
+
+func mixElement(ele *Ele, N int) {
+	if ele.val == 0 {
+		return
+	}
+	d := ele.prev
+	ele.remove()
+	if ele.val > 0 {
+		d = d.stepForward(ele.val%N)
+	} else {
+		d = d.stepBackward(ele.val%N)
+	}
+
+	ele.addAfter(d)
+}
+
+// ===========
+// LINKED LIST
+// ===========
 type Ele struct {
 	val   int
-	it    int
+	next  *Ele
+	prev  *Ele
 }
 
-func decrypt(arr []*Ele, times int) []*Ele {
-	count := 0
-	i := 0
-	//print(arr)
-	for count < times*len(arr) {
-		arr = move(arr, i)
-		i++
-		count++
-		if count % 10 == 0 {
-			fmt.Printf("%s: %d / %d\n", time.Now(), count, times*len(arr))
-		}
-		//print(arr)
+func (e *Ele) remove() {
+	e.prev.next = e.next
+	e.next.prev = e.prev
+}
+
+func (e *Ele) addAfter(d *Ele) {
+	e.prev = d
+	e.next = d.next
+	d.next.prev = e
+	d.next = e
+}
+
+func (ele *Ele) stepForward(n int) *Ele {
+	d := ele
+	for i := 0; i < n; i++ {
+		d = d.next
 	}
-	return arr
+	return d
 }
 
-func move(arr []*Ele, i int) []*Ele {
-	var removeFrom int
-	var insertAt int
-	var x *Ele
-	for j := 0; j < len(arr); j++ {
-		if arr[j].it == i {
-		   removeFrom = j
-		   x = arr[j]
-		   x.it = x.it + len(arr)
-		   break
-		}
+func (ele *Ele) stepBackward(negN int) *Ele {
+	d := ele
+	for i := 0; i < util.Abs(negN); i++ {
+		d = d.prev
 	}
-
-	//fmt.Println("before")
-	//print(arr)
-	arr = remove(arr, removeFrom)
-	//fmt.Println("remove")
-	//print(arr)
-	insertAt = removeFrom+x.val
-	for insertAt <= 0 {
-		insertAt += len(arr)
-	}
-	insertAt = insertAt%len(arr)
-
-	// This is complete defeat after not getting append to behave as expected
-	arr = insert(arr, x, insertAt)
-	//fmt.Println("iterator before insert", x.it)
-	//fmt.Println("insert at ", x.val, insertAt)
-	//print(arr)
-	return arr
-}
-
-func remove(arr []*Ele, idx int) []*Ele {
-	return append(arr[:idx], arr[idx+1:]...)
-}
-
-func insert(arr []*Ele, ele *Ele, idx int) []*Ele {
-	last := len(arr) - 1
-	arr = append(arr, arr[last])           // Step 1
-	copy(arr[idx+1:], arr[idx:last]) // Step 2
-	arr[idx] = ele
-	return arr
-}
-
-func print(arr []*Ele) {
-	for i := 0; i < len(arr); i++ {
-		fmt.Printf("%d ", arr[i].val)
-	}
-	fmt.Println("")
+	return d
 }

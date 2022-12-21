@@ -10,13 +10,13 @@ import (
 
 func Day15(inputFile string, part int) {
 	if part == 0 {
-		if strings.Contains(inputFile, "0.txt") {
+		if strings.Contains(inputFile, "1.txt") {
 			fmt.Printf("Known spots: %d\n", solveA(inputFile, 2000000))
 		} else if strings.Contains(inputFile, "1.txt") {
 			fmt.Printf("Known spots: %d\n", solveA(inputFile, 10))
 		}
 	} else {
-		if strings.Contains(inputFile, "0.txt") {
+		if strings.Contains(inputFile, "1.txt") {
 			fmt.Printf("Tuning Frequency: %d\n", solveB(inputFile, 4000001))
 		} else if strings.Contains(inputFile, "1.txt") {
 			fmt.Printf("Tuning Frequency: %d\n", solveB(inputFile, 21))
