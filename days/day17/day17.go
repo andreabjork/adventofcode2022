@@ -9,7 +9,7 @@ func Day17(inputFile string, part int) {
 	if part == 0 {
 		fmt.Printf("Tower height: %d\n", solve(inputFile, 2022))
 	} else {
-		fmt.Printf("Tower height: %d\n", solve(inputFile, 1000000))
+		fmt.Printf("Tower height: %d\n", solve(inputFile, 1000000000000))
 	}
 }
 
@@ -19,12 +19,69 @@ func solve(inputFile string, NUM_ROCKS int) int {
 	gas := parse(inputFile)
 	order := []func() *Rock{bar, plus, revL, pole, box,}
 	g := &Game{board, gas, order, 0, 0}
-	for i := 0; i < NUM_ROCKS; i++ {
-		g.drop(i%len(g.order))
+	intervals := []int{}
+	prev := 0
+	var rocksDropped int
+	repeats := 0
+	height := 0
+	for rocksDropped = 0; rocksDropped < NUM_ROCKS; rocksDropped++ { // Drop NUM_ROCKS or until we reach equilibrium
+		g.drop(rocksDropped%len(g.order))
+
+		// State reaches equilibrium where every repeating x5 rocks will be dropped in the same order, same manner,
+		// result in the same height added to the existing stack.
+		if rocksDropped % 5 == 0 {
+			intervals = append(intervals, g.max-prev)
+			prev = g.max
+			eq, reps, stack := checkForEquilibrium(intervals)
+			if eq {
+				repeats = reps
+				height = stack
+				break
+			}
+		}
+	}
+	eqHeight := 0
+	if rocksDropped < NUM_ROCKS {
+		// Quick drop by tallying up height of repeating stacks
+		mult := (NUM_ROCKS-rocksDropped)/(repeats*5)
+		quickDrop := (mult-1)*repeats*5
+		eqHeight = (mult-1)*height
+		// Drop the rest
+		for i := rocksDropped+quickDrop+1; i < NUM_ROCKS; i++ {
+			g.drop(i%len(g.order))
+		}
 	}
 
-	return g.max
+	return g.max+eqHeight
 }
+
+func checkForEquilibrium(heights []int) (bool, int, int) {
+	// Start with window as the back item
+	window := []int{heights[len(heights)-1]}
+	for i := len(heights)-2; i > len(heights)/3 + len(window); i-- {
+		if len(heights) >= 3*len(window) {
+			// Compare window to the next 2 iterations
+			firstStart := len(heights)-2*len(window)
+			secondStart := len(heights)-3*len(window)
+			eq := true
+			for k := 0; k < len(window); k++ {
+				if !(window[k] == heights[firstStart+k] && window[k] == heights[secondStart+k]) {
+					eq = false
+					break
+				}
+			}
+			// If equilibrium was not reached with that, extend window and repeat
+			if !eq || len(window) < 5 {
+				window = append([]int{heights[i]}, window...)
+			} else {
+				return true, len(window), util.Sum(window)
+			}
+		}
+	}
+
+	return false, 0, 0
+}
+
 
 type Game struct {
 	board   []map[int]int
