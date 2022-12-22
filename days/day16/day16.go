@@ -39,14 +39,13 @@ func solve(inputFile string) int {
 	return max
 }
 
-
 type Flow struct {
-	valves  map[string]*Valve // Ordered in the initial order
-	path 	[]*Valve // Always a valid path
-	active  []*Valve
-	dist    map[*Valve]map[*Valve]int
-	time    int
-	flow    int
+	valves map[string]*Valve // Ordered in the initial order
+	path   []*Valve          // Always a valid path
+	active []*Valve
+	dist   map[*Valve]map[*Valve]int
+	time   int
+	flow   int
 }
 
 func (f *Flow) alternate(v, w int) []*Valve {
@@ -68,27 +67,27 @@ func (f *Flow) compute() int {
 	for i := 0; i < len(f.path); i++ {
 		f.open(f.path[i-1], f.path[i])
 	}
-	f.timePasses(30-f.time)
+	f.timePasses(30 - f.time)
 
 	return f.flow
 }
 
 func (f *Flow) open(from *Valve, to *Valve) {
 	t := f.dist[from][to]
-	f.timePasses(t+1)
+	f.timePasses(t + 1)
 	f.active = append(f.active, to)
 }
 
 func (f *Flow) timePasses(seconds int) {
 	for _, ov := range f.active {
-		f.flow += seconds*ov.rate
+		f.flow += seconds * ov.rate
 	}
 }
 
 type Valve struct {
-	name      string
-	rate      int
-	tunnels   []*Valve // map[v] = x, where x is the length of path to v if one exists.
+	name    string
+	rate    int
+	tunnels []*Valve // map[v] = x, where x is the length of path to v if one exists.
 }
 
 func parse(inputFile string) *Flow {
@@ -96,7 +95,7 @@ func parse(inputFile string) *Flow {
 	line, ok := util.Read(ls)
 	re := regexp.MustCompile(`Valve ([A-Z]{2}) has flow rate=(\d+); tunnel[s]* lead[s]* to valve[s]* (.*)$`)
 
-	f := &Flow {
+	f := &Flow{
 		valves: map[string]*Valve{},
 		path:   []*Valve{},
 		active: []*Valve{},
@@ -130,37 +129,86 @@ func parse(inputFile string) *Flow {
 		}
 	}
 
+	fmt.Printf("AA: %d\n", f.valves["AA"].rate)
+	for _, t := range f.valves["AA"].tunnels {
+		fmt.Printf("-> %s\n", t.name)
+	}
 	return f
 }
 
 // ==================
 // Network & Dijkstra
 // ==================
-
-
 func (f *Flow) dijkstra(start int) {
-	unvisited := append(f.path[:start], f.path[start+1:]...)
+	if f.dist[f.path[start]] == nil {
+		f.dist[f.path[start]] = map[*Valve]int{}
+		for _, t := range f.path[start].tunnels {
+			fmt.Printf("here setting f.dist[%s][%s]\n", f.path[start].name, t.name)
+			f.dist[f.path[start]][t] = 1
+		}
+		f.dist[f.path[start]][f.path[start]] = 0
+	}
+
+	unvisited := f.path[start+1:]
+	unvisited = append(unvisited, f.path[:start]...)
 	// Iterate until all nodes have been visited
 	i := 0
+	fmt.Printf("Unvisited: %d\n", len(unvisited))
 	for len(unvisited) > 0 {
 		// Check all neighbours of unvisited node
-		for k := 0; k < len(unvisited[i].tunnels); k++ {
+		for k := 0; k < len(unvisited[i].tunnels) && len(unvisited) > 0; k++ {
+
+			if unvisited[i].name == "BB" {
+				fmt.Printf("Looking at BB\n")
+				for _, t := range f.valves["BB"].tunnels {
+					fmt.Printf("-> %s\n", t.name)
+				}
+				fmt.Printf("Distance to neighbour defined? checking dist [%s][%s]\n", f.path[start].name, unvisited[i].tunnels[0].name)
+				val, ok := f.dist[f.path[start]][unvisited[i].tunnels[0]]
+				fmt.Printf("ok? %s, value = %d\n", ok, val)
+				fmt.Printf("Distance to neighbour defined?")
+				fmt.Printf("Distance to neighbour defined? checking dist [%s][%s]\n", f.path[start].name, unvisited[i].tunnels[1].name)
+				val, ok = f.dist[f.path[start]][unvisited[i].tunnels[1]]
+				fmt.Printf("ok? %s, value = %d\n", ok, val)
+			}
 			// If node is reachable, visit it
 			if dist, ok := f.dist[f.path[start]][unvisited[i].tunnels[k]]; ok {
-				f.dist[f.path[start]][unvisited[i]] = dist+1
+				fmt.Printf("visiting %s\n", unvisited[i].name)
+				f.dist[f.path[start]][unvisited[i]] = dist + 1
+				fmt.Println("neighbours")
 				f.updateNeighbours(f.path[start], unvisited[i])
-				unvisited = append(unvisited[0:i], unvisited[i+1:]...)
-				i--
+				// remove element
+				arr := unvisited[:i]
+				unvisited = append(arr, unvisited[i+1:]...)
+				
+				if len(unvisited) == 0 {
+					break
+				} else {
+					fmt.Println(".i", i)
+					fmt.Println(".len", len(unvisited))
+					i = i % len(unvisited)
+
+				}
 			}
 		}
-		i++
+		if len(unvisited) == 0 {
+					break
+				} else {
+					fmt.Println(".i", i)
+					fmt.Println(".len", len(unvisited))
+					i++
+					i = i % len(unvisited)
+				}
+
+		fmt.Println("i", i)
+		fmt.Println("len", len(unvisited))
 	}
 }
 
 func (f *Flow) updateNeighbours(start, v *Valve) {
 	for k := 0; k < len(v.tunnels); k++ {
 		if f.dist[start][v]+1 < f.dist[start][v.tunnels[k]] {
-			f.dist[start][v.tunnels[k]] = f.dist[start][v]+1
+			f.dist[start][v.tunnels[k]] = f.dist[start][v] + 1
 			f.updateNeighbours(start, v.tunnels[k])
 		}
 	}
