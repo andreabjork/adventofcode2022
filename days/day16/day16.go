@@ -23,6 +23,12 @@ func solve(inputFile string) int {
 		flow.dijkstra(i)
 	}
 
+	for v, val := range flow.dist {
+		for w, d := range val {
+			fmt.Printf("dist %s to %s: %d\n", v.name, w.name, d)
+		}
+	}
+
 	max := 0
 	//max := flow.compute()
 	//for v := 0; v < len(flow.valves); v++ {
@@ -156,21 +162,7 @@ func (f *Flow) dijkstra(start int) {
 	fmt.Printf("Unvisited: %d\n", len(unvisited))
 	for len(unvisited) > 0 {
 		// Check all neighbours of unvisited node
-		for k := 0; k < len(unvisited[i].tunnels) && len(unvisited) > 0; k++ {
-
-			if unvisited[i].name == "BB" {
-				fmt.Printf("Looking at BB\n")
-				for _, t := range f.valves["BB"].tunnels {
-					fmt.Printf("-> %s\n", t.name)
-				}
-				fmt.Printf("Distance to neighbour defined? checking dist [%s][%s]\n", f.path[start].name, unvisited[i].tunnels[0].name)
-				val, ok := f.dist[f.path[start]][unvisited[i].tunnels[0]]
-				fmt.Printf("ok? %s, value = %d\n", ok, val)
-				fmt.Printf("Distance to neighbour defined?")
-				fmt.Printf("Distance to neighbour defined? checking dist [%s][%s]\n", f.path[start].name, unvisited[i].tunnels[1].name)
-				val, ok = f.dist[f.path[start]][unvisited[i].tunnels[1]]
-				fmt.Printf("ok? %s, value = %d\n", ok, val)
-			}
+		for k := 0; k < len(unvisited[i].tunnels); k++ {
 			// If node is reachable, visit it
 			if dist, ok := f.dist[f.path[start]][unvisited[i].tunnels[k]]; ok {
 				fmt.Printf("visiting %s\n", unvisited[i].name)
@@ -191,14 +183,6 @@ func (f *Flow) dijkstra(start int) {
 				}
 			}
 		}
-		if len(unvisited) == 0 {
-					break
-				} else {
-					fmt.Println(".i", i)
-					fmt.Println(".len", len(unvisited))
-					i++
-					i = i % len(unvisited)
-				}
 
 		fmt.Println("i", i)
 		fmt.Println("len", len(unvisited))
