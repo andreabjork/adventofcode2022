@@ -37,34 +37,46 @@ func solve(inputFile string) int {
 	printPath(flow.path)
 	fmt.Printf(" | %d\n", max)
 
-	for midx := 1; midx < len(flow.path)-1; midx++ {
-		fmt.Printf("Finding right valve for position %d\n", midx)
-		// Check the subsequent valves, and see if it would be better to open them at midx
-		for v := midx+1; v < len(flow.path); v++ {
-			if DEBUG {
-				fmt.Printf("Finding right valve for position %d\n", midx)
-			}
+	lequil := false
+	for !lequil {
+		lequil = true
+		for midx := 1; midx < len(flow.path); midx++ {
+			fmt.Printf("Finding right valve for position %d\n", midx)
 
-			alt := &Flow{
-				valves: flow.valves,
-				path:   nil,
-				active: flow.active,
-				dist:   flow.dist,
-				time:   flow.time,
-				flow:   flow.flow,
-			}
-			alt.path = flow.alternate(v, midx)
-			printPath(alt.path)
-			f := alt.compute()
-			fmt.Printf(" | %d ? %t \n", f, f > max)
-			if f > max {
-				flow = alt
-				max = f
-			}
-			if DEBUG {
-				fmt.Println("-------")
+			equilibrium := false
+			for !equilibrium {
+				equilibrium = true
+				// Check the subsequent valves, and see if it would be better to open them at midx
+				for v := 0; v < len(flow.path); v++ {
+					if DEBUG {
+						fmt.Printf("Finding right valve for position %d\n", midx)
+					}
+
+					alt := &Flow{
+						valves: flow.valves,
+						path:   nil,
+						active: flow.active,
+						dist:   flow.dist,
+						time:   flow.time,
+						flow:   flow.flow,
+					}
+					alt.path = flow.alternate(v, midx)
+					printPath(alt.path)
+					f := alt.compute()
+					fmt.Printf(" | %d ? %t \n", f, f > max)
+					if f > max {
+						equilibrium = false
+						lequil = false
+						flow = alt
+						max = f
+					}
+					if DEBUG {
+						fmt.Println("-------")
+					}
+				}
 			}
 		}
+
 	}
 
 	fmt.Println("BEST FLOW IS THIS ONE")
