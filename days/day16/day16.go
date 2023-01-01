@@ -16,47 +16,69 @@ func Day16(inputFile string, part int) {
 	}
 }
 
+const DEBUG = false
+
 func solve(inputFile string) int {
 	flow := parse(inputFile)
 	// Compute distances from every node to every other node
-	fmt.Printf("Initial path: %+v\n", flow.path)
 	for i, _ := range flow.path {
-		fmt.Printf("%d: %s\n", i, flow.path[i].name)
 		flow.dijkstra(i)
 	}
-	for v, val := range flow.dist {
-		for w, d := range val {
-			fmt.Printf("dist %s to %s: %d\n", v.name, w.name, d)
-		}
-	}
+//	for v, val := range flow.dist {
+//		for w, d := range val {
+//			fmt.Printf("dist %s to %s: %d\n", v.name, w.name, d)
+//		}
+//	}
 
 	//max := 0
-	fmt.Println("Before: ", len(flow.path))
 	flow.path = flow.initialize()
 	max := flow.compute()
-	fmt.Println("Initial flow is ", max)
-	
+
+	printPath(flow.path)
+	fmt.Printf(" | %d\n", max)
+
 	for midx := 1; midx < len(flow.path)-1; midx++ {
-		for v := midx; v < len(flow.path); v++ {
-			for w := v+1; w < len(flow.path); w++ {
-				// TODO this needs to be more robust
-				alt := flow
-				alt.path = flow.alternate(v, w)
-				if f := alt.compute(); f > max {
-					flow = alt
-					max = f
-				}
+		fmt.Printf("Finding right valve for position %d\n", midx)
+		// Check the subsequent valves, and see if it would be better to open them at midx
+		for v := midx+1; v < len(flow.path); v++ {
+			if DEBUG {
+				fmt.Printf("Finding right valve for position %d\n", midx)
+			}
+
+			alt := &Flow{
+				valves: flow.valves,
+				path:   nil,
+				active: flow.active,
+				dist:   flow.dist,
+				time:   flow.time,
+				flow:   flow.flow,
+			}
+			alt.path = flow.alternate(v, midx)
+			printPath(alt.path)
+			f := alt.compute()
+			fmt.Printf(" | %d ? %t \n", f, f > max)
+			if f > max {
+				flow = alt
+				max = f
+			}
+			if DEBUG {
 				fmt.Println("-------")
 			}
 		}
 	}
 
 	fmt.Println("BEST FLOW IS THIS ONE")
-	for i := 0; i < len(flow.path); i++ {
-		fmt.Printf("%s -> ", flow.path[i].name)
-	}
-	fmt.Println(max)
+	printPath(flow.path)
+	fmt.Printf(" | %d \n", max)
+
 	return max
+}
+
+func printPath(path []*Valve) {
+	for i := 0; i < len(path)-1; i++ {
+		fmt.Printf("%s -> ", path[i].name)
+	}
+	fmt.Printf("%s", path[len(path)-1].name)
 }
 
 type Flow struct {
@@ -69,16 +91,35 @@ type Flow struct {
 }
 
 func (f *Flow) alternate(v, w int) []*Valve {
+	// Move v to the w position
 	path := []*Valve{}
-	for i := 0; i < len(f.path); i++ {
-		if i == v {
-			path = append(path, f.path[w])
-		} else if i == w {
-			path = append(path, f.path[v])
-		} else {
+
+	if v == w {
+		return f.path
+	} else if v > w {
+		for i := 0; i < w; i++ {
+			path = append(path, f.path[i])
+		}
+		path = append(path, f.path[v])
+		for i := w; i < v; i++ {
+			path = append(path, f.path[i])
+		}
+		for i := v+1; i < len(f.path); i++ {
+			path = append(path, f.path[i])
+		}
+	} else {
+		for i := 0; i < v; i++ {
+			path = append(path, f.path[i])
+		}
+		for i := v+1; i < w; i++ {
+			path = append(path, f.path[i])
+		}
+		path = append(path, f.path[v])
+		for i := w; i < len(f.path); i++ {
 			path = append(path, f.path[i])
 		}
 	}
+
 	return path
 }
 
@@ -104,12 +145,16 @@ func (f *Flow) compute() int {
 			f.open(f.path[i], f.path[i+1])
 		}
 	}
-	fmt.Printf("All open, now passing %d time\n", 31-f.time)
+	if DEBUG {
+		fmt.Printf("All open, now passing %d time\n", 31-f.time)
+	}
 	n := 30-f.time
 	for i := 0; i < n; i++ {
 		f.timePasses(1)
 	}
-	fmt.Printf("Computed flow: t=%d, f=%d\n", f.time, f.flow)
+	if DEBUG {
+		fmt.Printf("Computed flow: t=%d, f=%d\n", f.time, f.flow)
+	}
 	return f.flow
 }
 
@@ -118,25 +163,35 @@ func (f *Flow) open(from *Valve, to *Valve) {
 	if !ok{
 		fmt.Println("FATAL")
 	} else {
-		fmt.Printf("Heading %s -> %s ( %d minutes )\n", from.name, to.name, t+1)
+		if DEBUG {
+			fmt.Printf("Heading %s -> %s ( %d minutes )\n", from.name, to.name, t+1)
+		}
 	}
 	for i := 0; i < t+1; i++ {
 		f.timePasses(1)
 	}
 	f.active = append(f.active, to)
-	fmt.Printf("Opened %s; t=%d, f: %d\n", to.name, f.time, f.flow)
+	if DEBUG {
+		fmt.Printf("Opened %s; t=%d, f: %d\n", to.name, f.time, f.flow)
+	}
 }
 
 func (f *Flow) timePasses(seconds int) {
 	f.time += seconds
-	fmt.Printf("t=%d | Valves ", f.time)
+	if DEBUG {
+		fmt.Printf("t=%d | Valves ", f.time)
+	}
 	press := 0
 	for _, ov := range f.active {
-		fmt.Printf("%s, ", ov.name)
+		if DEBUG {
+			fmt.Printf("%s, ", ov.name)
+		}
 		f.flow += seconds * ov.rate
 		press += seconds * ov.rate
 	}
-	fmt.Printf("are open, releasing %d pressure\n", press)
+	if DEBUG {
+		fmt.Printf("are open, releasing %d pressure\n", press)
+	}
 }
 
 type Valve struct {
@@ -162,7 +217,6 @@ func parse(inputFile string) *Flow {
 	ts := map[string][]string{}
 	for ok {
 		parts := re.FindStringSubmatch(line)
-		fmt.Println(parts)
 		valve := parts[1]
 		rate, _ := strconv.Atoi(parts[2])
 		tunnels := strings.Split(parts[3], ", ")
@@ -184,10 +238,6 @@ func parse(inputFile string) *Flow {
 		}
 	}
 
-	fmt.Printf("AA: %d\n", f.valves["AA"].rate)
-	for _, t := range f.valves["AA"].tunnels {
-		fmt.Printf("-> %s\n", t.name)
-	}
 	return f
 }
 
