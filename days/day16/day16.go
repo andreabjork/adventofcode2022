@@ -10,81 +10,25 @@ import (
 
 func Day16(inputFile string, part int) {
 	if part == 0 {
-		solve(inputFile)
+		fmt.Printf("Max flow: %d\n", solveA(inputFile))
 	} else {
 		fmt.Println("Not implmenented.")
 	}
 }
 
 const DEBUG = false
-
-func solve(inputFile string) int {
+func solveA(inputFile string) int {
 	flow := parse(inputFile)
 	// Compute distances from every node to every other node
 	for i, _ := range flow.path {
 		flow.dijkstra(i)
 	}
-//	for v, val := range flow.dist {
-//		for w, d := range val {
-//			fmt.Printf("dist %s to %s: %d\n", v.name, w.name, d)
-//		}
-//	}
 
-	//max := 0
 	flow.path = flow.initialize()
-	max := flow.compute()
-
-	printPath(flow.path)
-	fmt.Printf(" | %d\n", max)
-
-	lequil := false
-	for !lequil {
-		lequil = true
-		for midx := 1; midx < len(flow.path); midx++ {
-			fmt.Printf("Finding right valve for position %d\n", midx)
-
-			equilibrium := false
-			for !equilibrium {
-				equilibrium = true
-				// Check the subsequent valves, and see if it would be better to open them at midx
-				for v := 0; v < len(flow.path); v++ {
-					if DEBUG {
-						fmt.Printf("Finding right valve for position %d\n", midx)
-					}
-
-					alt := &Flow{
-						valves: flow.valves,
-						path:   nil,
-						active: flow.active,
-						dist:   flow.dist,
-						time:   flow.time,
-						flow:   flow.flow,
-					}
-					alt.path = flow.alternate(v, midx)
-					printPath(alt.path)
-					f := alt.compute()
-					fmt.Printf(" | %d ? %t \n", f, f > max)
-					if f > max {
-						equilibrium = false
-						lequil = false
-						flow = alt
-						max = f
-					}
-					if DEBUG {
-						fmt.Println("-------")
-					}
-				}
-			}
-		}
-
-	}
-
-	fmt.Println("BEST FLOW IS THIS ONE")
-	printPath(flow.path)
-	fmt.Printf(" | %d \n", max)
-
+	max := flow.remainder(flow.valves["AA"]).best(flow.valves["AA"], 30)
 	return max
 }
+
 
 func printPath(path []*Valve) {
 	for i := 0; i < len(path)-1; i++ {
@@ -93,6 +37,9 @@ func printPath(path []*Valve) {
 	fmt.Printf("%s", path[len(path)-1].name)
 }
 
+// ====
+// FLOW
+// ====
 type Flow struct {
 	valves map[string]*Valve // Ordered in the initial order
 	path   []*Valve          // Always a valid path
@@ -100,39 +47,6 @@ type Flow struct {
 	dist   map[*Valve]map[*Valve]int
 	time   int
 	flow   int
-}
-
-func (f *Flow) alternate(v, w int) []*Valve {
-	// Move v to the w position
-	path := []*Valve{}
-
-	if v == w {
-		return f.path
-	} else if v > w {
-		for i := 0; i < w; i++ {
-			path = append(path, f.path[i])
-		}
-		path = append(path, f.path[v])
-		for i := w; i < v; i++ {
-			path = append(path, f.path[i])
-		}
-		for i := v+1; i < len(f.path); i++ {
-			path = append(path, f.path[i])
-		}
-	} else {
-		for i := 0; i < v; i++ {
-			path = append(path, f.path[i])
-		}
-		for i := v+1; i < w; i++ {
-			path = append(path, f.path[i])
-		}
-		path = append(path, f.path[v])
-		for i := w; i < len(f.path); i++ {
-			path = append(path, f.path[i])
-		}
-	}
-
-	return path
 }
 
 func (f *Flow) initialize() []*Valve {
@@ -143,6 +57,48 @@ func (f *Flow) initialize() []*Valve {
 		}
 	}
 	return path
+}
+
+func (f *Flow) remainder(remove *Valve) *Flow {
+	remaining := []*Valve{}
+	for i := 0; i < len(f.path); i++ {
+		if f.path[i].name != remove.name {
+			remaining = append(remaining, f.path[i])
+		}
+	}
+
+	return &Flow{
+		valves: f.valves,
+		path:   remaining,
+		active: f.active,
+		dist:   f.dist,
+		time:   f.time,
+		flow:   f.flow,
+	}
+}
+
+func (f *Flow) best(from *Valve, minutes int) int {
+
+	if minutes <= 0 {
+		return 0
+	}
+	if len(f.path) == 1 {
+		timePassed := f.dist[from][f.path[0]] + 1
+		return f.path[0].rate * (minutes - timePassed)
+	}
+
+	max := 0
+	var timePassed, total int
+	for _, valve := range f.path {
+		// What if we opened valve next:
+		timePassed = f.dist[from][valve] + 1
+		total = valve.rate * (minutes - timePassed)
+		remainder := f.remainder(valve)
+		if fl := total + remainder.best(valve, minutes-timePassed); fl > max {
+			max = fl
+		}
+	}
+	return max
 }
 
 func (f *Flow) compute() int {
